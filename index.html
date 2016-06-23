@@ -1,0 +1,452 @@
+﻿<!DOCTYPE html>
+<html lang="ko">    
+<head>
+<meta charset="UTF-8" />
+<style>
+
+form {
+    margin: -10px;
+    background-color: black;
+    padding: -10px;
+}
+input {
+    text-align: right;
+}
+</style>
+
+<title>LIST</title>
+<script src="http://192.168.123.136:8002/socket.io/socket.io.js">
+</script>
+ <script type="text/javascript">
+
+var socket = io.connect("http://192.168.123.136:8002");
+var ctx;
+var cw;
+var ch;
+var state = "index";
+var bTime = 10;
+var rank = [];
+var gong = {
+    X: 0,
+    va: "",
+    lg: 0
+};
+var time = 0;
+var noclear = true;
+var deck = [];
+var card = [];
+var num = 1;
+var effect = [];
+var ready = 7;
+var a = 0
+, b = 0.25
+, c = 0.5
+, d = 0.75
+, e = 1;
+
+function hBox(x, y, w, h, x1, y1, w1, h1) {
+    if (x < x1 + w1 && x + w > x1 && y < y1 + h1 && y + h > y1) {
+        return true;
+    }
+}
+
+
+function init() {
+    ctx = document.getElementById('canvas').getContext('2d');
+    document.getElementById('canvas').addEventListener('mousedown', mClick, false);
+    // PC에서 마우스 이벤트
+    window.addEventListener('touchstart', tClick, false);
+    // 모바일에서 터치 이벤트
+    window.addEventListener('touchmove', function(e) {
+        // 모바일에서 화면 확대 불가하도록 설정
+        e.preventDefault();
+    }, false);
+    window.addEventListener('touchend', function(e) {
+        // 모바일에서 화면 확대 불가하도록 설정
+        e.preventDefault();
+    }, false);
+    cw = canvas.width;
+    ch = canvas.height;
+    regong();
+}
+
+function rerank() {
+    rank = [];
+    socket.emit('get1to100rank');
+    socket.on('rankdata1to100', function(data) {
+        rank = data;
+    }
+    );
+}
+
+function regong() {
+    socket.emit('getgong1to100');
+    socket.on('gongdata1to100', function(data) {
+        gong.va = data;
+        txt = gong.va;
+        met = ctx.measureText(txt).width;
+        gong.X = cw;
+        gong.lg = met;
+    }
+    );
+}
+
+function madeEffect(num) {
+    ef = {
+        X: card[num].X,
+        Y: card[num].Y,
+        W: card[num].W,
+        al: 1
+    };
+    effect.push(ef);
+}
+
+
+function madeNum() {
+    for (i = 0; i < 100; i++) {
+        deck[i] = i + 1;
+    }
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 30; j++) {
+            var d = (i * 9) + Math.floor(Math.random() * 9);
+            var s = (i * 9) + Math.floor(Math.random() * 9);
+            var tmp = deck[d];
+            deck[d] = deck[s];
+            deck[s] = tmp;
+        }
+    }
+}
+
+function madeDeck() {
+    var acard, bcard;
+    for (j = 0; j < 3; j++) {
+        for (i = 0; i < 3; i++) {
+            card[j * 3 + i] = {
+                X: 50 + i * (cw - 100) / 3,
+                Y: 230 + j * 200,
+                W: (cw - 100) / 3 - 10,
+                H: (cw - 100) / 3 - 10,
+                va: deck[j * 3 + i]
+            };
+        }
+    }
+}
+setInterval(drawAll, 100);
+// 0.1초 단위로 그리기
+
+function drawAll() {
+    if (state == "index") {
+        drawIndex();
+    }
+    if (state == "rank") {
+        drawRank();
+    }
+    if (state == "gameStart") {
+        gameStart();
+    }
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(0, 0, cw, ch);
+    ctx.fill();
+    ctx.stroke();
+}
+
+function drawIndex() {
+    var grad = ctx.createLinearGradient(cw, 0, cw, ch);
+    // 그라디언트 효과
+    grad.addColorStop(0, "rgb(140,220,120)");
+    grad.addColorStop(0.5, "white");
+    grad.addColorStop(1, "rgb(60,30,60)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.font = "30px 궁서"
+    ctx.fillStyle = "rgb(255,0,0)";
+    ctx.save();
+    // 회전효과
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.translate(80, 200);
+    ctx.rotate(-0.5);
+    ctx.translate(-80, -200);
+    ctx.fillText("List Test", 80, 220);
+    ctx.restore();
+    ctx.font = "bolder 100px 궁서 "
+    var txt = "List Test";
+    // 중앙정렬
+    var met = ctx.measureText(txt);
+    var textWidth = met.width;
+    var gradient = ctx.createLinearGradient(0, 300, cw, 400);
+    gradient.addColorStop(a, "green");
+    gradient.addColorStop(b, "blue");
+    gradient.addColorStop(c, "white");
+    gradient.addColorStop(d, "red");
+    gradient.addColorStop(e, "yellow");
+    a = co(a);
+    b = co(b);
+    c = co(c);
+    d = co(d);
+    e = co(e);
+    function co(tmp) {
+        if (tmp < 1) {
+            return tmp + 0.05;
+        } 
+        else {
+            return 0;
+        }
+    }
+    ctx.fillStyle = gradient;
+    ctx.fillText(txt, canvas.width / 2 - textWidth / 2 + 40, 300);
+    var grad = ctx.createLinearGradient(0, 550, 0, 700);
+    grad.addColorStop(0, "white");
+    grad.addColorStop(0.35, "rgb(180,180,200)");
+    grad.addColorStop(0.65, "rgb(180,180,200)");
+    grad.addColorStop(1, "gray");
+    ctx.fillStyle = grad;
+    ctx.fillRect(100, 550, 500, 150);
+    var grad = ctx.createLinearGradient(0, 750, 0, 900);
+    grad.addColorStop(0, "white");
+    grad.addColorStop(0.35, "rgb(180,180,200)");
+    grad.addColorStop(0.65, "rgb(180,180,200)");
+    grad.addColorStop(1, "gray");
+    ctx.fillStyle = grad;
+    ctx.fillRect(100, 750, 500, 150);
+    ctx.font = "bolder 40px 궁서 "
+    ctx.fillStyle = "rgb(90,30,140)"
+    if (gong.X > 0 - gong.lg * 2) {
+        gong.X -= 10;
+    } 
+    else {
+        gong.X = cw;
+    }
+    ctx.fillText(gong.va, gong.X, 100);
+    txt = "시작";
+    met = ctx.measureText(txt).width;
+    ctx.fillText(txt, canvas.width / 2 - met / 2, 640);
+    txt = "LIST보기";
+    met = ctx.measureText(txt).width;
+    ctx.fillText(txt, canvas.width / 2 - met / 2, 840);
+    ctx.fillStyle = "rgb(120,30,80)"
+    ctx.font = "bolder 20px 궁서 "
+    //txt = "Made By WJ";
+    met = ctx.measureText(txt).width;
+    ctx.fillText(txt, canvas.width / 2 - met / 2, 1150);
+}
+
+
+
+function drawRank() {
+    var grad = ctx.createLinearGradient(0, 0, cw, ch);
+    grad.addColorStop(0, "white");
+    grad.addColorStop(1, "gray");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.font = "bolder 40px 궁서 "
+    var grad = ctx.createLinearGradient(0, 1000, 0, 1130);
+    grad.addColorStop(0, "white");
+    grad.addColorStop(0.35, "rgb(120,180,200)");
+    grad.addColorStop(0.65, "rgb(120,180,200)");
+    grad.addColorStop(1, "gray");
+    ctx.fillStyle = grad;
+    ctx.fillRect(100, 1000, 500, 130);
+    ctx.fillStyle = "rgb(170,20,120)"
+    txt = "뒤로 가기";
+    met = ctx.measureText(txt).width;
+    ctx.fillText(txt, canvas.width / 2 - met / 2, 1080);
+    ctx.font = "bolder 70px 궁서 "
+    ctx.fillStyle = "rgb(70,0,80)"
+    txt = "LIST";	
+    met = ctx.measureText(txt).width;
+    ctx.fillText(txt, canvas.width / 2 - met / 2, 100);
+    ctx.font = "bolder 34px 궁서 "
+    ctx.fillStyle = "black"
+    for (i = 0; i < rank.length; i++) {
+        ctx.fillText((i + 1) + ". " + rank[i][0] + " : " + rank[i][1], 60, 250 + i * 40);
+    }
+}
+
+function gameStart() {
+	
+    ctx.textBaseline = "middle";
+    
+	var grad = ctx.createLinearGradient(0, ch, cw, 0);
+    
+	grad.addColorStop(0, "rgb(140,220,120)");
+    grad.addColorStop(0.5, "white");
+    grad.addColorStop(1, "rgb(220,210,2500)");
+    
+	ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.fillStyle = "rgb(120,30,80)"
+    ctx.font = "bolder 100px 궁서";
+    txt = "LIST";
+    met = ctx.measureText(txt).width;
+    ctx.fillText(txt, canvas.width / 2 - met / 2, 100);
+    ctx.font = "bolder 40px 궁서 "
+    
+	var grad = ctx.createLinearGradient(0, 1000, 0, 1130);
+    grad.addColorStop(0, "white");
+    grad.addColorStop(0.5, "rgb(90,170,40)");
+    grad.addColorStop(1, "gray");
+    ctx.fillStyle = grad;
+    ctx.fillRect(100, 1000, 500, 130);
+    ctx.fillStyle = "rgb(120,30,80)"
+    ctx.fillText("Time : " + time, 100, 500);
+    ctx.fillStyle = "rgb(20,20,170)"
+    
+	
+	
+    txt = "뒤로가기";
+    met = ctx.measureText(txt).width;
+    ctx.fillText(txt, canvas.width / 2 - met / 2, 1060);
+	
+	if (ready < 0) {
+        if (noclear) {
+            time++;
+        }
+		
+    } 
+	
+    else {
+        ctx.font = "bolder 130px 궁서 "
+        ctx.fillStyle = "black"
+        ready--;
+    }
+	
+    drawEffect();
+    ctx.textBaseline = "bottom";
+}
+
+
+function drawEffect() {
+    // 이펙트를 그린다.
+    for (i = 0; i < effect.length; i++) {
+        ctx.fillStyle = "white";
+        //"rgb(170,120,170)"
+        ctx.globalAlpha = effect[i].al;
+        ctx.fillRect(effect[i].X, effect[i].Y, effect[i].W, effect[i].W);
+        effect[i].X -= 20;
+        effect[i].Y -= 20;
+        effect[i].W += 40;
+        effect[i].al -= 0.35;
+        if (effect[i].al < 0) {
+            effect.splice(i, 1);
+        }
+    }
+    ctx.globalAlpha = 1;
+}
+
+window.addEventListener('load', init);
+</script>
+
+</head>
+<body>
+<form name ="f" id = "f">
+<canvas id ='canvas' width = "700" height = "1200" padding = "0">
+   <script>
+
+var viewport, newGameWidth, newGameHeight, newGameX, newGameY;
+var count = 0;
+
+(function() {
+    // 현재 화면이 어떤 크기이든 상관없이 Canvas의 크기를 조절 해 준다. (http://blog.naver.com/tommybee/220171126971 출처)
+    var game = {
+        element: document.getElementById("canvas"),
+        width: 700,
+        height: 1200
+    }
+    resizeGame = function() {
+        
+        viewport = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        };
+        
+        if (game.height / game.width > viewport.height / viewport.width) {
+            newGameHeight = viewport.height;
+            newGameWidth = newGameHeight * game.width / game.height;
+        } else {
+            newGameWidth = viewport.width;
+            newGameHeight = newGameWidth * game.height / game.width;
+        }
+        
+        game.element.style.width = newGameWidth - 10 + "px";
+        game.element.style.height = newGameHeight - 10 + "px";
+        
+        newGameX = (viewport.width - newGameWidth) / 2;
+        newGameY = (viewport.height - newGameHeight) / 2;
+        game.element.style.padding = (newGameY) + "px " + (newGameX) + "px";
+    }
+    ;
+    window.addEventListener("resize", resizeGame);
+    resizeGame();
+}())
+function mClick(ev) {
+    // 마우스 클릭 이벤트
+    
+    var mx, my;
+    if (ev.layerX || ev.layerX == 0) {
+        mx = ev.layerX - newGameX;
+        my = ev.layerY - newGameY;
+    } 
+    else if (ev.offsetX || ev.offsetX == 0) {
+        mx = ev.offsetX - newGameX;
+        my = ev.offsetY - newGameY;
+    }
+    sass(mx, my);
+}
+function tClick(ev) {
+    // 모바일 터치 이벤트
+    var mx, my;
+    mx = ev.touches[0].clientX - newGameX;
+    my = ev.touches[0].clientY - newGameY;
+    sass(mx, my);
+}
+function sass(mx, my) {
+    // 클릭 또는 터치 확인
+    var temp = 100 / (1200 / newGameHeight);
+    if (state == "index") {
+        if (hBox(mx, my, 0, 0, 100 / 100 * temp, 550 / 100 * temp, 500 / 100 * temp, 150 / 100 * temp)) {
+            deck = [];
+            effect = [];
+            time = 0;
+            madeNum()
+            madeDeck();
+            noclear = true;
+            rerank();
+            num = 1;
+            ready = 7;
+            state = "gameStart";
+        }
+        if (hBox(mx, my, 0, 0, 100 / 100 * temp, 750 / 100 * temp, 500 / 100 * temp, 150 / 100 * temp)) {
+            rerank();
+            state = "rank";
+        }
+    }
+    if (state == "rank") {
+        if (hBox(mx, my, 0, 0, 100 / 100 * temp, 1000 / 100 * temp, 500 / 100 * temp, 130 / 100 * temp)) {
+            state = "index";
+            regong()
+        }
+    }
+    if (state == "gameStart") {
+        
+        if (hBox(mx, my, 0, 0, 100 / 100 * temp, 1000 / 100 * temp, 500 / 100 * temp, 130 / 100 * temp)) {
+            var jbResult = prompt('이름을 입력하세요', '');
+                                socket.emit('time1to100', [time, jbResult]);
+                                rerank();
+                                state = "rank"
+            regong()
+        	}
+
+			
+		if	(ready < 0)
+		{
+		
+		}
+		
+    }
+}
+</script>
+</canvas>
+</form>
+</body>
+</HTML>
